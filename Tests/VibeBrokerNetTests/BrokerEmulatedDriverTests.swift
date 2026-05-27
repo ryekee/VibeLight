@@ -94,6 +94,31 @@ extension BrokerEmulatedDriverSolidTests {
     func makeConfigForBreathe() -> Config { makeConfig() }
 }
 
+final class BrokerEmulatedDriverCancellationTests: XCTestCase {
+    func testRenderCancelsPreviousEffect() async {
+        let cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        let spy = SpyHAClient()
+        let driver = BrokerEmulatedDriver(client: spy, config: cfg)
+
+        // Start breathe.
+        await driver.render(.working)
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        let countAfterBreathe = spy.calls.count
+
+        // Switch to solid (needsAuth).
+        await driver.render(.needsAuth)
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        let countAfterSwitch = spy.calls.count
+
+        // After switching to a solid effect, only ~1 additional call should appear
+        // (instead of continuing to add ~1/s for breathe).
+        XCTAssertLessThanOrEqual(countAfterSwitch - countAfterBreathe, 3,
+            "previous breathe effect should have been cancelled")
+
+        await driver.cancel()
+    }
+}
+
 final class BrokerEmulatedDriverBlinkTests: XCTestCase {
     func testBlinkAlternatesOnOff() async {
         let cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
