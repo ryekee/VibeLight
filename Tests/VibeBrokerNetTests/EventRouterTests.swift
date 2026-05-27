@@ -80,3 +80,50 @@ final class SpyDriver: LightDriver, @unchecked Sendable {
     }
     func cancel() async {}
 }
+
+final class EventRouterEndpointTests: XCTestCase {
+    private func makeConfig() -> Config { BrokerEmulatedDriverSolidTests().makeConfigForBreathe() }
+
+    func testStateEndpointReturnsCurrentSnapshot() async throws {
+        let store = SessionStore(ttlSeconds: 300)
+        await store.handle(HookEvent(
+            hookName: .userPromptSubmit, sessionId: "s1", cwd: "/p",
+            toolResponseIsError: false, notificationMessage: nil
+        ))
+        let driver = SpyDriver()
+        let router = EventRouter(store: store, driver: driver, config: makeConfig())
+
+        let req = HTTPRequest(method: "GET", path: "/state", query: [:], headers: [:], body: Data())
+        let resp = await router.handle(req)
+        XCTAssertEqual(resp.status, 200)
+        let json = try JSONSerialization.jsonObject(with: resp.body) as! [String: Any]
+        XCTAssertEqual(json["effective"] as? String, "working")
+    }
+
+    func testHealthEndpoint() async {
+        let store = SessionStore(ttlSeconds: 300)
+        let router = EventRouter(store: store, driver: SpyDriver(), config: makeConfig())
+        let req = HTTPRequest(method: "GET", path: "/health", query: [:], headers: [:], body: Data())
+        let resp = await router.handle(req)
+        XCTAssertEqual(resp.status, 200)
+    }
+
+    func testTestEndpointTriggersDriver() async {
+        let store = SessionStore(ttlSeconds: 300)
+        let driver = SpyDriver()
+        let router = EventRouter(store: store, driver: driver, config: makeConfig())
+        let req = HTTPRequest(method: "POST", path: "/test",
+                              query: ["state": "needs_auth"], headers: [:], body: Data())
+        let resp = await router.handle(req)
+        XCTAssertEqual(resp.status, 204)
+        XCTAssertEqual(driver.lastRendered, .needsAuth)
+    }
+
+    func testUnknownEndpointReturns404() async {
+        let store = SessionStore(ttlSeconds: 300)
+        let router = EventRouter(store: store, driver: SpyDriver(), config: makeConfig())
+        let req = HTTPRequest(method: "GET", path: "/nope", query: [:], headers: [:], body: Data())
+        let resp = await router.handle(req)
+        XCTAssertEqual(resp.status, 404)
+    }
+}
