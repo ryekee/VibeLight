@@ -66,3 +66,29 @@ final class BrokerEmulatedDriverSolidTests: XCTestCase {
         await driver.cancel()
     }
 }
+
+final class BrokerEmulatedDriverBreatheTests: XCTestCase {
+    private func makeConfig() -> Config {
+        BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+    }
+
+    func testBreatheLoopAlternatesBrightness() async {
+        let spy = SpyHAClient()
+        let driver = BrokerEmulatedDriver(client: spy, config: makeConfig())
+
+        await driver.render(.working)
+        try? await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 s -> ~3 ticks
+
+        await driver.cancel()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertGreaterThanOrEqual(spy.calls.count, 2)
+        let brightnessValues = Set(spy.calls.compactMap(\.brightness))
+        XCTAssertGreaterThanOrEqual(brightnessValues.count, 2,
+            "breathe should produce at least two brightness levels")
+    }
+}
+
+extension BrokerEmulatedDriverSolidTests {
+    func makeConfigForBreathe() -> Config { makeConfig() }
+}

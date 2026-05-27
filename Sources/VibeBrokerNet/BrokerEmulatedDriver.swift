@@ -24,8 +24,25 @@ public actor BrokerEmulatedDriver: LightDriver {
                     data: LightPayload.turnOn(entityId: entityId, color: color, transition: 0.3)
                 )
             }
-        case .breathe, .blink, .blinkThenSolid:
-            // Implemented in tasks 11, 12.
+        case .breathe:
+            currentTask = Task { [client, color, entityId] in
+                var high = true
+                let highBrightness = color.brightness
+                let lowBrightness = max(20, color.brightness / 3)
+                while !Task.isCancelled {
+                    try? await client.callService(
+                        domain: "light", service: "turn_on",
+                        data: LightPayload.turnOn(
+                            entityId: entityId, color: color, transition: 1.0,
+                            brightnessOverride: high ? highBrightness : lowBrightness
+                        )
+                    )
+                    high.toggle()
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 s
+                }
+            }
+        case .blink, .blinkThenSolid:
+            // Implemented in task 12.
             break
         }
     }
