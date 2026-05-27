@@ -1,5 +1,9 @@
 import Foundation
 
+public protocol LightServiceCaller: Sendable {
+    func callService(domain: String, service: String, data: [String: Any]) async throws
+}
+
 public final class HAClient: @unchecked Sendable {
     public enum Error: Swift.Error, Equatable {
         case unauthorized
@@ -64,3 +68,5 @@ public final class HAClient: @unchecked Sendable {
         }
     }
 }
+
+extension HAClient: LightServiceCaller {}
