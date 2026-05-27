@@ -32,6 +32,11 @@ public actor HTTPListener {
         let listener = try NWListener(using: params, on: requestedPort)
         listener.newConnectionHandler = { [weak self] conn in
             guard let self else { return }
+            // Spec §8: only accept loopback connections.
+            if !Self.isLoopback(conn.endpoint) {
+                conn.cancel()
+                return
+            }
             Task { await self.handle(conn) }
         }
         // Assign before start so cancel() works even if we throw.
@@ -81,20 +86,24 @@ public actor HTTPListener {
     }
 
     private func readUntilHeadersAndBody(_ conn: NWConnection) async throws -> Data {
+        enum ReadError: Error { case prematureClose }
         var buffer = Data()
         while true {
             let chunk = try await receiveOnce(conn)
             buffer.append(chunk)
-            if let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8)) {
-                let headerString = String(data: buffer.subdata(in: 0..<headerEnd.lowerBound), encoding: .utf8) ?? ""
+            let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8))
+            if let end = headerEnd {
+                let headerString = String(data: buffer.subdata(in: 0..<end.lowerBound), encoding: .utf8) ?? ""
                 let contentLength = parseContentLength(headerString)
-                let bodyStart = headerEnd.upperBound
-                let bodyReceived = buffer.count - bodyStart
+                let bodyReceived = buffer.count - end.upperBound
                 if bodyReceived >= contentLength {
                     return buffer
                 }
             }
-            if chunk.isEmpty { return buffer }
+            if chunk.isEmpty {
+                // Client closed before full request arrived.
+                throw ReadError.prematureClose
+            }
         }
     }
 
@@ -138,6 +147,22 @@ public actor HTTPListener {
                 }
             })
         }
+    }
+
+    private static func isLoopback(_ endpoint: NWEndpoint) -> Bool {
+        if case let .hostPort(host, _) = endpoint {
+            switch host {
+            case .ipv4(let addr):
+                return addr.isLoopback
+            case .ipv6(let addr):
+                return addr.isLoopback
+            case .name(let name, _):
+                return name == "localhost"
+            @unknown default:
+                return false
+            }
+        }
+        return false
     }
 
     private static func statusText(_ code: Int) -> String {

@@ -37,3 +37,18 @@ final class HTTPListenerTests: XCTestCase {
         XCTAssertEqual(String(data: capturedBody ?? Data(), encoding: .utf8), #"{"hello":1}"#)
     }
 }
+
+extension HTTPListenerTests {
+    func testListenerStillServesLoopbackAfterFix() async throws {
+        // Regression: after adding loopback filtering, 127.0.0.1 connections still work.
+        let listener = HTTPListener(port: 0) { _ in
+            HTTPResponse(status: 200, body: Data("ok".utf8))
+        }
+        try await listener.start()
+        defer { Task { await listener.stop() } }
+
+        let port = await listener.boundPort()
+        let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/")!)
+        XCTAssertEqual(String(data: data, encoding: .utf8), "ok")
+    }
+}
