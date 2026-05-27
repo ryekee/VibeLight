@@ -57,7 +57,8 @@ public actor EventRouter {
     }
 
     private func scheduleErrorClear(sessionId: String) {
-        let nanos = UInt64(config.behavior.errorAutoClearSeconds * 1_000_000_000)
+        let secs = max(0.0, config.behavior.errorAutoClearSeconds)
+        let nanos = UInt64(secs * 1_000_000_000)
         let task = Task { [weak self] in
             try? await Task.sleep(nanoseconds: nanos)
             guard !Task.isCancelled else { return }
@@ -77,7 +78,7 @@ public actor EventRouter {
 
     private func renderEffective() async {
         debounceTask?.cancel()
-        let ms = config.behavior.debounceMillis
+        let ms = max(0, config.behavior.debounceMillis)
         if ms == 0 {
             await actuallyRender()
         } else {
