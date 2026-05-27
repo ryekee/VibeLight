@@ -28,6 +28,7 @@ final class SpyHAClient: LightServiceCaller, @unchecked Sendable {
 final class BrokerEmulatedDriverSolidTests: XCTestCase {
     private let workingColor = ColorConfig(rgb: [40, 120, 255], brightness: 200, effect: .breathe)
     private let needsAuthColor = ColorConfig(rgb: [255, 30, 30], brightness: 230, effect: .solid)
+    private let errorColor = ColorConfig(rgb: [255, 30, 30], brightness: 230, effect: .blink)
 
     private func makeConfig() -> Config {
         Config(
@@ -43,7 +44,7 @@ final class BrokerEmulatedDriverSolidTests: XCTestCase {
                 .compacting: workingColor,
                 .waitingInput: workingColor,
                 .needsAuth: needsAuthColor,
-                .error: needsAuthColor,
+                .error: errorColor,
                 .done: workingColor,
             ]
         )
@@ -91,4 +92,46 @@ final class BrokerEmulatedDriverBreatheTests: XCTestCase {
 
 extension BrokerEmulatedDriverSolidTests {
     func makeConfigForBreathe() -> Config { makeConfig() }
+}
+
+final class BrokerEmulatedDriverBlinkTests: XCTestCase {
+    func testBlinkAlternatesOnOff() async {
+        let cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        let spy = SpyHAClient()
+        let driver = BrokerEmulatedDriver(client: spy, config: cfg)
+
+        await driver.render(.error)
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        await driver.cancel()
+
+        let services = spy.calls.map { $0.service }
+        XCTAssertTrue(services.contains("turn_on"))
+        XCTAssertTrue(services.contains("turn_off"))
+    }
+
+    func testBlinkThenSolidEndsWithSolid() async {
+        var cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        let blinkColor = ColorConfig(rgb: [255, 140, 30], brightness: 220, effect: .blinkThenSolid)
+        var colors = cfg.colors
+        colors[.waitingInput] = blinkColor
+        cfg = Config(
+            broker: cfg.broker, homeAssistant: cfg.homeAssistant,
+            behavior: BehaviorConfig(
+                sessionTtlSeconds: cfg.behavior.sessionTtlSeconds,
+                errorAutoClearSeconds: cfg.behavior.errorAutoClearSeconds,
+                doneBlinkSeconds: cfg.behavior.doneBlinkSeconds,
+                waitingInputBlinkSeconds: 1.0,
+                debounceMillis: cfg.behavior.debounceMillis
+            ),
+            colors: colors
+        )
+        let spy = SpyHAClient()
+        let driver = BrokerEmulatedDriver(client: spy, config: cfg)
+
+        await driver.render(.waitingInput)
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        await driver.cancel()
+
+        XCTAssertEqual(spy.calls.last?.service, "turn_on")
+    }
 }
