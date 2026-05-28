@@ -11,16 +11,32 @@ public struct ColorConfig: Codable, Sendable, Equatable {
     public let rgb: [Int]            // [r, g, b], 0-255
     public let brightness: Int       // 0-255
     public let effect: Effect
+
+    public init(rgb: [Int], brightness: Int, effect: Effect) {
+        self.rgb = rgb
+        self.brightness = brightness
+        self.effect = effect
+    }
 }
 
 public struct BrokerConfig: Codable, Sendable {
     public let port: UInt16
+
+    public init(port: UInt16) {
+        self.port = port
+    }
 }
 
 public struct HAConfig: Codable, Sendable {
     public let url: URL
     public let token: String
     public let lightEntity: String
+
+    public init(url: URL, token: String, lightEntity: String) {
+        self.url = url
+        self.token = token
+        self.lightEntity = lightEntity
+    }
 }
 
 public struct BehaviorConfig: Codable, Sendable {
@@ -29,6 +45,20 @@ public struct BehaviorConfig: Codable, Sendable {
     public let doneBlinkSeconds: TimeInterval
     public let waitingInputBlinkSeconds: TimeInterval
     public let debounceMillis: Int
+
+    public init(
+        sessionTtlSeconds: TimeInterval,
+        errorAutoClearSeconds: TimeInterval,
+        doneBlinkSeconds: TimeInterval,
+        waitingInputBlinkSeconds: TimeInterval,
+        debounceMillis: Int
+    ) {
+        self.sessionTtlSeconds = sessionTtlSeconds
+        self.errorAutoClearSeconds = errorAutoClearSeconds
+        self.doneBlinkSeconds = doneBlinkSeconds
+        self.waitingInputBlinkSeconds = waitingInputBlinkSeconds
+        self.debounceMillis = debounceMillis
+    }
 }
 
 public struct Config: Sendable {
@@ -36,6 +66,18 @@ public struct Config: Sendable {
     public let homeAssistant: HAConfig
     public let behavior: BehaviorConfig
     public let colors: [State: ColorConfig]
+
+    public init(
+        broker: BrokerConfig,
+        homeAssistant: HAConfig,
+        behavior: BehaviorConfig,
+        colors: [State: ColorConfig]
+    ) {
+        self.broker = broker
+        self.homeAssistant = homeAssistant
+        self.behavior = behavior
+        self.colors = colors
+    }
 
     private struct Raw: Codable {
         let broker: BrokerConfig
