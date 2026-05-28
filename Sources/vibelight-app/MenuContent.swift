@@ -7,7 +7,12 @@ struct MenuContent: View {
     var body: some View {
         statusSection
         Divider()
+        sessionsSection
         pauseSection
+        testSection
+        Divider()
+        Button("Show Sessions Window…") { /* wired in Task 10 */ }
+        Button("Settings…")            { /* wired in Task 10 */ }
         Divider()
         Button("Quit VibeLight") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
@@ -23,6 +28,26 @@ struct MenuContent: View {
                 Text(StateAppearance.label(viewModel.effectiveState))
                 Text("Sessions: \(viewModel.sessions.count)")
                     .font(.caption)
+            }
+        }
+    }
+
+    private var sessionsSection: some View {
+        Menu("Sessions (\(viewModel.sessions.count))") {
+            if viewModel.sessions.isEmpty {
+                Text("No active sessions").foregroundColor(.secondary)
+            } else {
+                ForEach(viewModel.sessions, id: \.id) { rec in
+                    Text("\(StateAppearance.label(rec.state)) — \(rec.cwd ?? String(rec.id.prefix(8)))")
+                }
+            }
+        }
+    }
+
+    private var testSection: some View {
+        Menu("Test light effect") {
+            ForEach(VibeBrokerCore.State.allCases, id: \.self) { state in
+                Button(StateAppearance.label(state)) { viewModel.testRender(state) }
             }
         }
     }
