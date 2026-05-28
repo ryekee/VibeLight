@@ -12,5 +12,15 @@ struct VibeLightApp: App {
                 .foregroundColor(StateAppearance.color(viewModel.effectiveState))
         }
         .menuBarExtraStyle(.menu)
+
+        Window("VibeLight Sessions", id: "sessions") {
+            SessionsWindow(viewModel: viewModel)
+        }
+        .windowResizability(.contentMinSize)
+
+        Window("VibeLight Settings", id: "settings") {
+            SettingsPlaceholderWindow()
+        }
+        .windowResizability(.contentSize)
     }
 }

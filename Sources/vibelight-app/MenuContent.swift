@@ -3,6 +3,7 @@ import VibeBrokerCore
 
 struct MenuContent: View {
     @ObservedObject var viewModel: AppViewModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         statusSection
@@ -11,8 +12,8 @@ struct MenuContent: View {
         pauseSection
         testSection
         Divider()
-        Button("Show Sessions Window…") { /* wired in Task 10 */ }
-        Button("Settings…")            { /* wired in Task 10 */ }
+        Button("Show Sessions Window…") { openWindow(id: "sessions") }
+        Button("Settings…")            { openWindow(id: "settings") }
         Divider()
         Button("Quit VibeLight") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
