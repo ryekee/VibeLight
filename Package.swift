@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "VibeBrokerCore", targets: ["VibeBrokerCore"]),
         .library(name: "VibeBrokerNet", targets: ["VibeBrokerNet"]),
         .executable(name: "vibelight-broker", targets: ["vibelight-broker"]),
+        .executable(name: "vibelight-app", targets: ["vibelight-app"]),
     ],
     targets: [
         .target(name: "VibeBrokerCore"),
@@ -15,6 +16,11 @@ let package = Package(
         .executableTarget(
             name: "vibelight-broker",
             dependencies: ["VibeBrokerCore", "VibeBrokerNet"]
+        ),
+        .executableTarget(
+            name: "vibelight-app",
+            dependencies: ["VibeBrokerCore", "VibeBrokerNet"],
+            resources: [.copy("AppInfo.plist")]
         ),
         .testTarget(name: "VibeBrokerCoreTests", dependencies: ["VibeBrokerCore"]),
         .testTarget(
