@@ -8,8 +8,7 @@ struct VibeLightApp: App {
         MenuBarExtra {
             MenuContent(viewModel: viewModel)
         } label: {
-            Image(systemName: "circle.fill")
-                .foregroundColor(StateAppearance.color(viewModel.effectiveState))
+            MenuBarLabel(viewModel: viewModel)
         }
         .menuBarExtraStyle(.menu)
 
