@@ -9,9 +9,11 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var paused: Bool = false
     @Published private(set) var listening: Bool = false
     @Published private(set) var lastError: String?
+    @Published private(set) var pauseUntil: Date?
 
     private var host: BrokerHost?
     private var refreshTask: Task<Void, Never>?
+    private var pauseResumeTask: Task<Void, Never>?
 
     init() { bootstrap() }
 
@@ -47,10 +49,30 @@ final class AppViewModel: ObservableObject {
         listening = false
     }
 
-    func setPaused(_ paused: Bool) {
+    func pauseFor(_ duration: PauseDuration) {
+        let resumeAt = duration.resumeDate(now: Date())
+        pauseUntil = resumeAt
+        setPausedInternal(true)
+        pauseResumeTask?.cancel()
+        pauseResumeTask = Task { [weak self] in
+            let nanos = UInt64(max(0, resumeAt.timeIntervalSinceNow) * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: nanos)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.resume() }
+        }
+    }
+
+    func resume() {
+        pauseResumeTask?.cancel()
+        pauseResumeTask = nil
+        pauseUntil = nil
+        setPausedInternal(false)
+    }
+
+    private func setPausedInternal(_ paused: Bool) {
         Task {
             await host?.setPaused(paused)
-            self.paused = paused
+            await MainActor.run { self.paused = paused }
         }
     }
 
