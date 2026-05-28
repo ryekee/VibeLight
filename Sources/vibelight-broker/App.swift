@@ -11,32 +11,14 @@ struct App {
             exit(2)
         }
         let config = try Config.loadFromDisk(configPath)
-        let store = SessionStore(ttlSeconds: config.behavior.sessionTtlSeconds)
-        let haClient = HAClient(
-            baseURL: config.homeAssistant.url,
-            token: config.homeAssistant.token
-        )
-        let driver = BrokerEmulatedDriver(client: haClient, config: config)
-        let router = EventRouter(store: store, driver: driver, config: config)
-        let listener = HTTPListener(port: config.broker.port) { request in
-            await router.handle(request)
-        }
-        try await listener.start()
+        let host = BrokerHost(config: config)
+        try await host.start()
 
-        let actualPort = await listener.boundPort()
+        let actualPort = await host.boundPort()
         print("vibelight-broker: listening on 127.0.0.1:\(actualPort)")
 
-        // Periodic TTL pruning every 60 s.
-        let pruneTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 60_000_000_000)
-                _ = await store.pruneExpired()
-            }
-        }
-        defer { pruneTask.cancel() }
-
         await waitForShutdownSignal()
-        await listener.stop()
+        await host.stop()
         print("vibelight-broker: stopped")
     }
 
