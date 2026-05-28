@@ -18,6 +18,20 @@ public struct HookEvent: Sendable {
     public let toolResponseIsError: Bool
     public let notificationMessage: String?
 
+    public init(
+        hookName: HookName,
+        sessionId: String,
+        cwd: String?,
+        toolResponseIsError: Bool,
+        notificationMessage: String?
+    ) {
+        self.hookName = hookName
+        self.sessionId = sessionId
+        self.cwd = cwd
+        self.toolResponseIsError = toolResponseIsError
+        self.notificationMessage = notificationMessage
+    }
+
     public enum ParseError: Error {
         case unknownHook(String)
         case missingSessionId

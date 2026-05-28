@@ -76,6 +76,31 @@ public actor BrokerHost {
         await driver.render(state)
     }
 
+    public func discoverHistoricalSessions(
+        root: URL = TranscriptDiscovery.defaultClaudeRoot(),
+        cutoff: Date = Date().addingTimeInterval(-24 * 3600),
+        limit: Int = 40
+    ) async -> Int {
+        let discovery = TranscriptDiscovery()
+        let ids: [String]
+        do {
+            ids = try await discovery.findRecentSessionIDs(root: root, cutoff: cutoff, limit: limit)
+        } catch {
+            return 0
+        }
+        for id in ids {
+            let event = HookEvent(
+                hookName: .sessionStart,
+                sessionId: id,
+                cwd: nil,
+                toolResponseIsError: false,
+                notificationMessage: nil
+            )
+            await store.handle(event)
+        }
+        return ids.count
+    }
+
     public func driverMode() -> DriverMode { mode }
 
     public func setDriverMode(_ newMode: DriverMode) async {

@@ -46,6 +46,10 @@ final class AppViewModel: ObservableObject {
                 }
                 await host.setDriverMode(.init(rawValue: settings.renderMode.rawValue) ?? .brokerEmulated)
                 try await host.start()
+                let recovered = await host.discoverHistoricalSessions()
+                if recovered > 0 {
+                    print("VibeLight: recovered \(recovered) historical Claude Code sessions")
+                }
                 self.host = host
                 self.listening = true
                 self.startSessionRefresh()
