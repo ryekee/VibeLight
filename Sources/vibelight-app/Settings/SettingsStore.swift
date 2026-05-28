@@ -17,8 +17,14 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(brokerPort, forKey: Keys.brokerPort.rawValue); fire() }
     }
     @Published var launchAtLogin: Bool {
-        didSet { defaults.set(launchAtLogin, forKey: Keys.launchAtLogin.rawValue); fire() }
+        didSet {
+            defaults.set(launchAtLogin, forKey: Keys.launchAtLogin.rawValue)
+            loginItemSyncResult = LoginItemManager.sync(enabled: launchAtLogin)
+            fire()
+        }
     }
+
+    @Published private(set) var loginItemSyncResult: LoginItemManager.SyncResult = .ok
     @Published var notifyOnHAError: Bool {
         didSet { defaults.set(notifyOnHAError, forKey: Keys.notifyOnHAError.rawValue); fire() }
     }
