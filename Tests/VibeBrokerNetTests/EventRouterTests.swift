@@ -127,3 +127,44 @@ final class EventRouterEndpointTests: XCTestCase {
         XCTAssertEqual(resp.status, 404)
     }
 }
+
+final class EventRouterObserverTests: XCTestCase {
+    func testObserverReceivesEffectiveStateOnEvent() async throws {
+        let store = SessionStore(ttlSeconds: 300)
+        let driver = SpyDriver()
+        var cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        cfg = Config(
+            broker: cfg.broker, homeAssistant: cfg.homeAssistant,
+            behavior: BehaviorConfig(
+                sessionTtlSeconds: cfg.behavior.sessionTtlSeconds,
+                errorAutoClearSeconds: cfg.behavior.errorAutoClearSeconds,
+                doneBlinkSeconds: cfg.behavior.doneBlinkSeconds,
+                waitingInputBlinkSeconds: cfg.behavior.waitingInputBlinkSeconds,
+                debounceMillis: 0
+            ),
+            colors: cfg.colors
+        )
+        let router = EventRouter(store: store, driver: driver, config: cfg)
+
+        let received = ObserverRecorder()
+        await router.setObserver { state in await received.append(state) }
+
+        let body = #"{"session_id":"s1"}"#
+        let request = HTTPRequest(
+            method: "POST", path: "/event",
+            query: ["hook": "UserPromptSubmit"],
+            headers: [:], body: Data(body.utf8)
+        )
+        _ = await router.handle(request)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        let states = await received.snapshot()
+        XCTAssertEqual(states, [.working])
+    }
+}
+
+final actor ObserverRecorder {
+    private(set) var observed: [State] = []
+    func append(_ s: State) { observed.append(s) }
+    func snapshot() -> [State] { observed }
+}

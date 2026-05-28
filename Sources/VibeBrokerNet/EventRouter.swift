@@ -9,6 +9,14 @@ public actor EventRouter {
     private var errorClearTasks: [String: Task<Void, Never>] = [:]
     private var debounceTask: Task<Void, Never>?
 
+    public typealias EffectiveStateObserver = @Sendable (State) async -> Void
+
+    private var observer: EffectiveStateObserver?
+
+    public func setObserver(_ observer: @escaping EffectiveStateObserver) {
+        self.observer = observer
+    }
+
     public init(store: SessionStore, driver: LightDriver, config: Config) {
         self.store = store
         self.driver = driver
@@ -94,6 +102,7 @@ public actor EventRouter {
         let snapshot = await store.snapshot()
         let effective = Arbiter.compute(snapshot)
         await driver.render(effective)
+        if let observer { await observer(effective) }
     }
 
     private func handleState() async -> HTTPResponse {
