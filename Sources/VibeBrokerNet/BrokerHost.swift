@@ -1,11 +1,17 @@
 import Foundation
 import VibeBrokerCore
 
+public enum DriverMode: String, Sendable, Equatable {
+    case brokerEmulated
+    case scenePack
+}
+
 public actor BrokerHost {
-    private let config: Config
+    private var config: Config
     private let store: SessionStore
     private let haClient: HAClient
-    private let driver: BrokerEmulatedDriver
+    private var driver: any LightDriver
+    private var mode: DriverMode = .brokerEmulated
     private let router: EventRouter
     private let listener: HTTPListener
 
@@ -18,8 +24,9 @@ public actor BrokerHost {
             baseURL: config.homeAssistant.url,
             token: config.homeAssistant.token
         )
-        self.driver = BrokerEmulatedDriver(client: haClient, config: config)
-        self.router = EventRouter(store: store, driver: driver, config: config)
+        let initial = BrokerEmulatedDriver(client: haClient, config: config)
+        self.driver = initial
+        self.router = EventRouter(store: store, driver: initial, config: config)
         let router = self.router
         self.listener = HTTPListener(port: config.broker.port) { request in
             await router.handle(request)
@@ -65,7 +72,35 @@ public actor BrokerHost {
     }
 
     /// Trigger a one-off driver render (used by Test light effect menu).
-    public func testRender(_ state: State) async {
+    public func testRender(_ state: VibeBrokerCore.State) async {
         await driver.render(state)
+    }
+
+    public func driverMode() -> DriverMode { mode }
+
+    public func setDriverMode(_ newMode: DriverMode) async {
+        guard newMode != mode else { return }
+        await driver.cancel()
+        mode = newMode
+        switch newMode {
+        case .brokerEmulated:
+            driver = BrokerEmulatedDriver(client: haClient, config: config)
+        case .scenePack:
+            driver = ScenePackDriver(client: haClient)
+        }
+        await router.setDriver(driver)
+    }
+
+    public func reload(config newConfig: Config) async {
+        config = newConfig
+        await driver.cancel()
+        switch mode {
+        case .brokerEmulated:
+            driver = BrokerEmulatedDriver(client: haClient, config: newConfig)
+        case .scenePack:
+            driver = ScenePackDriver(client: haClient)
+        }
+        await router.setDriver(driver)
+        await router.setConfig(newConfig)
     }
 }

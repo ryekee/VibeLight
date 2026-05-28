@@ -63,3 +63,39 @@ final class BrokerHostTests: XCTestCase {
         XCTAssertFalse(pausedFalse)
     }
 }
+
+final class BrokerHostDriverModeTests: XCTestCase {
+    private func makeConfig(port: UInt16 = 0) -> Config {
+        let base = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        return Config(
+            broker: BrokerConfig(port: port),
+            homeAssistant: base.homeAssistant,
+            behavior: base.behavior, colors: base.colors
+        )
+    }
+
+    func testCanSwitchToScenePackMode() async throws {
+        let host = BrokerHost(config: makeConfig())
+        try await host.start()
+        defer { Task { await host.stop() } }
+
+        await host.setDriverMode(.scenePack)
+        let mode1 = await host.driverMode()
+        XCTAssertEqual(mode1, .scenePack)
+
+        await host.setDriverMode(.brokerEmulated)
+        let mode2 = await host.driverMode()
+        XCTAssertEqual(mode2, .brokerEmulated)
+    }
+
+    func testReloadReplacesConfig() async throws {
+        let host = BrokerHost(config: makeConfig(port: 0))
+        try await host.start()
+        defer { Task { await host.stop() } }
+
+        let newCfg = makeConfig(port: 0)
+        await host.reload(config: newCfg)
+        let snapshot = await host.sessionSnapshot()
+        XCTAssertTrue(snapshot.isEmpty)
+    }
+}

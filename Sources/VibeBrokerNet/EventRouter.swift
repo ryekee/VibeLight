@@ -3,8 +3,8 @@ import VibeBrokerCore
 
 public actor EventRouter {
     private let store: SessionStore
-    private let driver: LightDriver
-    private let config: Config
+    private var driver: any LightDriver
+    private var config: Config
 
     private var errorClearTasks: [String: Task<Void, Never>] = [:]
     private var debounceTask: Task<Void, Never>?
@@ -28,7 +28,15 @@ public actor EventRouter {
 
     public func isPaused() -> Bool { paused }
 
-    public init(store: SessionStore, driver: LightDriver, config: Config) {
+    public func setDriver(_ newDriver: any LightDriver) {
+        driver = newDriver
+    }
+
+    public func setConfig(_ newConfig: Config) {
+        config = newConfig
+    }
+
+    public init(store: SessionStore, driver: any LightDriver, config: Config) {
         self.store = store
         self.driver = driver
         self.config = config
