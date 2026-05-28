@@ -168,3 +168,71 @@ final actor ObserverRecorder {
     func append(_ s: State) { observed.append(s) }
     func snapshot() -> [State] { observed }
 }
+
+final class EventRouterPauseTests: XCTestCase {
+    func testPausedRouterSkipsDriverButNotifiesObserver() async throws {
+        let store = SessionStore(ttlSeconds: 300)
+        let driver = SpyDriver()
+        var cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        cfg = Config(
+            broker: cfg.broker, homeAssistant: cfg.homeAssistant,
+            behavior: BehaviorConfig(
+                sessionTtlSeconds: cfg.behavior.sessionTtlSeconds,
+                errorAutoClearSeconds: cfg.behavior.errorAutoClearSeconds,
+                doneBlinkSeconds: cfg.behavior.doneBlinkSeconds,
+                waitingInputBlinkSeconds: cfg.behavior.waitingInputBlinkSeconds,
+                debounceMillis: 0
+            ),
+            colors: cfg.colors
+        )
+        let router = EventRouter(store: store, driver: driver, config: cfg)
+        let received = ObserverRecorder()
+        await router.setObserver { s in await received.append(s) }
+
+        await router.setPaused(true)
+
+        let request = HTTPRequest(
+            method: "POST", path: "/event",
+            query: ["hook": "UserPromptSubmit"], headers: [:],
+            body: Data(#"{"session_id":"s1"}"#.utf8)
+        )
+        _ = await router.handle(request)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertNil(driver.lastRendered, "driver must not render while paused")
+        let observed = await received.snapshot()
+        XCTAssertEqual(observed, [.working], "observer should still receive state while paused")
+    }
+
+    func testResumeImmediatelyRenders() async throws {
+        let store = SessionStore(ttlSeconds: 300)
+        let driver = SpyDriver()
+        var cfg = BrokerEmulatedDriverSolidTests().makeConfigForBreathe()
+        cfg = Config(
+            broker: cfg.broker, homeAssistant: cfg.homeAssistant,
+            behavior: BehaviorConfig(
+                sessionTtlSeconds: cfg.behavior.sessionTtlSeconds,
+                errorAutoClearSeconds: cfg.behavior.errorAutoClearSeconds,
+                doneBlinkSeconds: cfg.behavior.doneBlinkSeconds,
+                waitingInputBlinkSeconds: cfg.behavior.waitingInputBlinkSeconds,
+                debounceMillis: 0
+            ),
+            colors: cfg.colors
+        )
+        let router = EventRouter(store: store, driver: driver, config: cfg)
+
+        await router.setPaused(true)
+        let request = HTTPRequest(
+            method: "POST", path: "/event",
+            query: ["hook": "UserPromptSubmit"], headers: [:],
+            body: Data(#"{"session_id":"s1"}"#.utf8)
+        )
+        _ = await router.handle(request)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertNil(driver.lastRendered)
+
+        await router.setPaused(false)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(driver.lastRendered, .working, "resume should re-render current effective state")
+    }
+}

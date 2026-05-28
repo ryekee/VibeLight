@@ -8,6 +8,7 @@ public actor EventRouter {
 
     private var errorClearTasks: [String: Task<Void, Never>] = [:]
     private var debounceTask: Task<Void, Never>?
+    private var paused: Bool = false
 
     public typealias EffectiveStateObserver = @Sendable (State) async -> Void
 
@@ -16,6 +17,16 @@ public actor EventRouter {
     public func setObserver(_ observer: @escaping EffectiveStateObserver) {
         self.observer = observer
     }
+
+    public func setPaused(_ paused: Bool) async {
+        let wasResumed = self.paused && !paused
+        self.paused = paused
+        if wasResumed {
+            await actuallyRender()
+        }
+    }
+
+    public func isPaused() -> Bool { paused }
 
     public init(store: SessionStore, driver: LightDriver, config: Config) {
         self.store = store
@@ -101,7 +112,9 @@ public actor EventRouter {
     private func actuallyRender() async {
         let snapshot = await store.snapshot()
         let effective = Arbiter.compute(snapshot)
-        await driver.render(effective)
+        if !paused {
+            await driver.render(effective)
+        }
         if let observer { await observer(effective) }
     }
 
