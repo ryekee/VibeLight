@@ -6,3 +6,4 @@ DerivedData/
 build/
 config.json
 *.log
+prd.md
