@@ -18,8 +18,17 @@ struct VibeLightApp: App {
         .windowResizability(.contentMinSize)
 
         Window("VibeLight Settings", id: "settings") {
-            SettingsPlaceholderWindow()
+            SettingsWindow(viewModel: viewModel)
         }
         .windowResizability(.contentSize)
+
+        Window("VibeLight Onboarding", id: "onboarding") {
+            if viewModel.needsOnboarding {
+                OnboardingWindow(viewModel: OnboardingViewModel(appViewModel: viewModel))
+            } else {
+                EmptyView()
+            }
+        }
+        .windowResizability(.contentMinSize)
     }
 }

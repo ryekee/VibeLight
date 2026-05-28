@@ -21,7 +21,10 @@ struct MenuContent: View {
 
     private var statusSection: some View {
         Group {
-            if let err = viewModel.lastError {
+            if viewModel.needsOnboarding {
+                Text("Setup required")
+                Button("Continue setup…") { openWindow(id: "onboarding") }
+            } else if let err = viewModel.lastError {
                 Text("⚠️ \(err)")
             } else if !viewModel.listening {
                 Text("Starting broker…")
