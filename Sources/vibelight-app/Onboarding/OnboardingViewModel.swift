@@ -73,8 +73,10 @@ final class OnboardingViewModel: ObservableObject {
         }
         let client = HAClient(baseURL: url, token: token)
         do {
-            _ = try await client.getApiStatus()
+            try await client.getApiStatus()
             lastError = nil
+        } catch HAClient.Error.unauthorized {
+            lastError = "Invalid token (401) — check your long-lived access token."
         } catch {
             lastError = "Connection failed: \(error)"
         }

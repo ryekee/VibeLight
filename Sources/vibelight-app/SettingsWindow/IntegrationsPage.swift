@@ -151,8 +151,10 @@ struct IntegrationsPage: View {
         }
         let client = HAClient(baseURL: url, token: t)
         do {
-            _ = try await client.getApiStatus()
+            try await client.getApiStatus()
             testStatus = "✓ Connected"
+        } catch HAClient.Error.unauthorized {
+            testStatus = "✗ Invalid token (401)"
         } catch {
             testStatus = "✗ \(error)"
         }

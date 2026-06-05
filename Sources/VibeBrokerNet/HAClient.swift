@@ -39,15 +39,18 @@ public final class HAClient: @unchecked Sendable {
         try assertOK(response)
     }
 
-    public func getApiStatus() async throws -> Bool {
+    /// Probes `GET /api/`. Returns normally on a 2xx response; throws
+    /// `.unauthorized` on 401, `.server(code)` on other non-2xx, and
+    /// `.transport` when the host is unreachable. Callers must not
+    /// discard the result — a thrown error is the only failure signal.
+    public func getApiStatus() async throws {
         var request = URLRequest(url: baseURL.appendingPathComponent("api/"))
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 0.5
 
         let (_, response) = try await sendRequest(request)
-        guard let http = response as? HTTPURLResponse else { return false }
-        return (200..<300).contains(http.statusCode)
+        try assertOK(response)
     }
 
     private func sendRequest(_ req: URLRequest) async throws -> (Data, URLResponse) {
