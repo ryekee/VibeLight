@@ -15,6 +15,20 @@ enum StateAppearance {
         }
     }
 
+    /// Colored emoji dot mirroring `color(_:)`. Used in the menu's text rows
+    /// because the macOS `.menu` style can't reliably tint custom RGB swatches,
+    /// whereas emoji always render in color.
+    static func swatch(_ state: VibeBrokerCore.State) -> String {
+        switch state {
+        case .idle, .done:    return "🟣" // purple
+        case .working:        return "🔵" // blue
+        case .compacting:     return "🟡" // yellow
+        case .waitingInput:   return "🟠" // orange
+        case .needsAuth,
+             .error:          return "🔴" // red
+        }
+    }
+
     /// Short human label shown in the status row of the menu.
     static func label(_ state: VibeBrokerCore.State) -> String {
         switch state {
