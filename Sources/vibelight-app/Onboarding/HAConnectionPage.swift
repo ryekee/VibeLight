@@ -4,6 +4,7 @@ struct HAConnectionPage: View {
     @ObservedObject var viewModel: OnboardingViewModel
     @State private var tokenInput: String = ""
     @State private var probing: Bool = false
+    @State private var testPassed: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -42,24 +43,36 @@ struct HAConnectionPage: View {
                 .onAppear { tokenInput = viewModel.settings.haToken ?? "" }
                 .onChange(of: tokenInput) { newValue in
                     viewModel.settings.haToken = newValue
+                    invalidateTest()
                 }
 
             HStack {
                 Button(probing ? "Testing…" : "Test connection") {
                     probing = true
+                    testPassed = false
                     Task {
                         await viewModel.testHAConnection()
                         probing = false
-                        viewModel.canAdvance = (viewModel.lastError == nil)
+                        let ok = (viewModel.lastError == nil)
+                        viewModel.canAdvance = ok
+                        testPassed = ok
                     }
                 }
                 .disabled(probing)
                 if let err = viewModel.lastError {
-                    Text(err).foregroundColor(.red).font(.caption)
+                    Label(err, systemImage: "xmark.circle.fill")
+                        .foregroundColor(.red).font(.caption)
+                } else if testPassed {
+                    Label("Connected — click Next to continue", systemImage: "checkmark.circle.fill")
+                        .foregroundColor(.green).font(.caption)
                 }
             }
             Spacer()
         }
+        // Editing the URL invalidates a prior successful test so the user
+        // can't advance with credentials that were never re-verified.
+        // (Token edits are handled in the SecureField's onChange above.)
+        .onChange(of: viewModel.settings.haURL) { _ in invalidateTest() }
         .onAppear {
             viewModel.canAdvance = false
             viewModel.startDiscovery()
@@ -67,5 +80,13 @@ struct HAConnectionPage: View {
         .onDisappear {
             viewModel.stopDiscovery()
         }
+    }
+
+    /// Reset a prior "Connected" result whenever the URL or token changes,
+    /// forcing a fresh "Test connection" before Next re-enables.
+    private func invalidateTest() {
+        testPassed = false
+        viewModel.canAdvance = false
+        viewModel.lastError = nil
     }
 }

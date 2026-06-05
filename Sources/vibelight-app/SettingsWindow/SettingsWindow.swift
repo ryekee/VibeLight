@@ -40,11 +40,11 @@ struct SettingsWindow: View {
         Label {
             Text(destination.label)
         } icon: {
+            // Tinted glyph, no filled tile: white-on-tile was unreadable on
+            // light tints (e.g. the yellow Light Effects bulb) and washed out
+            // further under the row's selection highlight.
             Image(systemName: destination.systemImage)
-                .frame(width: 20, height: 20)
-                .foregroundColor(.white)
-                .background(destination.tint)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .foregroundStyle(destination.tint)
         }
         .tag(destination)
     }

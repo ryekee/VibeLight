@@ -46,10 +46,8 @@ final class AppViewModel: ObservableObject {
                 }
                 await host.setDriverMode(.init(rawValue: settings.renderMode.rawValue) ?? .brokerEmulated)
                 try await host.start()
-                let recovered = await host.discoverHistoricalSessions()
-                if recovered > 0 {
-                    print("VibeLight: recovered \(recovered) historical Claude Code sessions")
-                }
+                // No cold-start seeding: the session list reflects only real
+                // hook events, not guesses from transcript files on disk.
                 self.host = host
                 self.listening = true
                 self.startSessionRefresh()
@@ -94,7 +92,11 @@ final class AppViewModel: ObservableObject {
             guard let reach = self?.reachability else { return }
             let stream = await reach.stream()
             for await value in stream {
-                await MainActor.run { self?.isAtHome = value }
+                // Dedupe: the reachability actor yields on every probe (incl.
+                // the 5-min periodic one) even when the value is unchanged.
+                await MainActor.run {
+                    if self?.isAtHome != value { self?.isAtHome = value }
+                }
             }
         }
         Task { _ = await reach.checkNow() }
@@ -148,7 +150,13 @@ final class AppViewModel: ObservableObject {
                 guard let self else { return }
                 if let snapshot = await self.host?.sessionSnapshot() {
                     let sorted = snapshot.values.sorted { $0.since > $1.since }
-                    await MainActor.run { self.sessions = sorted }
+                    // Only publish when the list actually changed. Reassigning an
+                    // identical array every second still fires objectWillChange,
+                    // which re-renders the menu bar menu and collapses any open
+                    // submenu out from under the cursor.
+                    await MainActor.run {
+                        if self.sessions != sorted { self.sessions = sorted }
+                    }
                 }
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }

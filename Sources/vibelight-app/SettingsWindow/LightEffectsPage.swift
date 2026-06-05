@@ -66,7 +66,18 @@ struct LightEffectsPage: View {
         SettingsRow(StateAppearance.label(state), description: description) {
             HStack(spacing: 8) {
                 ColorPicker("", selection: bindingForColor(state)).labelsHidden().frame(width: 36)
-                Slider(value: bindingForBrightness(state), in: 1...255, step: 1).frame(width: 120)
+                // Brightness. The sun min/max labels say what the slider is;
+                // dropping `step:1` removes the 255 tick marks that rendered as
+                // a stray bar under the track.
+                Slider(value: bindingForBrightness(state), in: 1...255) {
+                    Text("Brightness")
+                } minimumValueLabel: {
+                    Image(systemName: "sun.min")
+                } maximumValueLabel: {
+                    Image(systemName: "sun.max.fill")
+                }
+                .labelsHidden()
+                .frame(width: 150)
                 Text("\(Int(viewModel.settings.colors[state]?.brightness ?? 0))")
                     .font(.caption.monospacedDigit())
                     .frame(width: 32, alignment: .trailing)

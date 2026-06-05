@@ -64,10 +64,9 @@ struct SettingsPageHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: destination.systemImage)
-                .frame(width: 22, height: 22)
-                .foregroundColor(.white)
-                .background(destination.tint)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .font(.title2)
+                .foregroundStyle(destination.tint)
+                .frame(width: 26, height: 26)
             Text(destination.label).font(.title2).bold()
         }
         .padding(.bottom, 8)

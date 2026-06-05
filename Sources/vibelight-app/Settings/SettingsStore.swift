@@ -41,18 +41,11 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(homeSSIDHint, forKey: Keys.homeSSIDHint.rawValue); fire() }
     }
 
-    // MARK: - Token (Keychain-backed)
+    // MARK: - Token (file-backed, see TokenStore)
 
     var haToken: String? {
-        get { KeychainHelper.get("haToken") }
-        set {
-            if let v = newValue, !v.isEmpty {
-                KeychainHelper.set(v, for: "haToken")
-            } else {
-                KeychainHelper.delete(for: "haToken")
-            }
-            fire()
-        }
+        get { TokenStore.get() }
+        set { TokenStore.set(newValue); fire() }
     }
 
     // MARK: - Derived
@@ -127,7 +120,7 @@ final class SettingsStore: ObservableObject {
 
     func resetAll() {
         for key in Keys.allCases { defaults.removeObject(forKey: key.rawValue) }
-        KeychainHelper.delete(for: "haToken")
+        TokenStore.set(nil)
         haURL = ""; haLightEntity = ""; brokerPort = 17345
         launchAtLogin = true; notifyOnHAError = true; defaultPauseSeconds = 1800
         renderMode = .brokerEmulated

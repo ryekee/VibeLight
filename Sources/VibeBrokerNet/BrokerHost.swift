@@ -76,6 +76,10 @@ public actor BrokerHost {
         await driver.render(state)
     }
 
+    /// Best-effort cold-start seeding from transcript filenames. No longer
+    /// called at launch — the app shows only sessions it has heard real hook
+    /// events from (file mtimes can't tell an open-but-quiet session from a
+    /// closed one). Kept as available API in case a future opt-in wants it.
     public func discoverHistoricalSessions(
         root: URL = TranscriptDiscovery.defaultClaudeRoot(),
         cutoff: Date = Date().addingTimeInterval(-24 * 3600),

@@ -29,7 +29,7 @@ struct MenuContent: View {
             } else if !viewModel.listening {
                 Text("Starting broker…")
             } else {
-                Text(StateAppearance.label(viewModel.effectiveState))
+                Text("\(StateAppearance.swatch(viewModel.effectiveState))  \(StateAppearance.label(viewModel.effectiveState))")
                 Text("Sessions: \(viewModel.sessions.count)")
                     .font(.caption)
             }
@@ -42,7 +42,7 @@ struct MenuContent: View {
                 Text("No active sessions").foregroundColor(.secondary)
             } else {
                 ForEach(viewModel.sessions, id: \.id) { rec in
-                    Text("\(StateAppearance.label(rec.state)) — \(rec.cwd ?? String(rec.id.prefix(8)))")
+                    Text("\(StateAppearance.swatch(rec.state)) \(StateAppearance.label(rec.state)) — \(rec.cwd ?? String(rec.id.prefix(8)))")
                 }
             }
         }

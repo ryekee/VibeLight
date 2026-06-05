@@ -75,15 +75,48 @@ final class HAClientTests: XCTestCase {
         }
     }
 
-    func testGetApiStatusReturnsTrueOn200() async throws {
+    func testGetApiStatusSucceedsOn200() async throws {
         MockURLProtocol.handler = { req in
             let resp = HTTPURLResponse(url: req.url!, statusCode: 200,
                                        httpVersion: nil, headerFields: nil)!
             return (resp, Data("{}".utf8))
         }
         let client = makeClient()
-        let ok = try await client.getApiStatus()
-        XCTAssertTrue(ok)
+        try await client.getApiStatus()  // no throw == reachable
+    }
+
+    func testGetApiStatusThrowsUnauthorizedOn401() async {
+        MockURLProtocol.handler = { req in
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 401,
+                                       httpVersion: nil, headerFields: nil)!
+            return (resp, Data("{}".utf8))
+        }
+        let client = makeClient()
+        do {
+            try await client.getApiStatus()
+            XCTFail("expected throw on 401")
+        } catch HAClient.Error.unauthorized {
+            // expected
+        } catch {
+            XCTFail("wrong error: \(error)")
+        }
+    }
+
+    func testGetApiStatusThrowsServerOnOther5xx() async {
+        MockURLProtocol.handler = { req in
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 500,
+                                       httpVersion: nil, headerFields: nil)!
+            return (resp, Data("{}".utf8))
+        }
+        let client = makeClient()
+        do {
+            try await client.getApiStatus()
+            XCTFail("expected throw on 500")
+        } catch HAClient.Error.server(let code) {
+            XCTAssertEqual(code, 500)
+        } catch {
+            XCTFail("wrong error: \(error)")
+        }
     }
 }
 
