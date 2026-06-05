@@ -43,7 +43,7 @@ Higher-priority states beat lower-priority ones when multiple sessions are activ
 
 ### Other niceties
 
-- **Cold-start session recovery** — at launch, VibeLight scans `~/.claude/projects/*/*.jsonl` (filenames only, no transcript parsing) and seeds the session store with the last 24 h of sessions so the menu's Sessions list isn't empty when you start the app fresh.
+- **Live session list** — the menu's Sessions list shows only sessions VibeLight has received real hook events from. It deliberately does *not* guess from transcript files on disk: a file's modification time can't tell an open-but-idle session from a closed one, so guessing over-counts. (A filename-based seeder, `TranscriptDiscovery`, still ships as opt-in API but is no longer wired at launch.)
 - **At-home detection** — uses `NWPathMonitor` + periodic HA `/api/` probes. When you're off your home network the light isn't reachable, so VibeLight pauses driving instead of spamming failed REST calls. Status is visible in the menu.
 - **Pause** — pause 15 min / 1 h / until tomorrow / indefinitely from the menubar. Useful when you don't want the lamp blinking through a meeting.
 - **Test render** — pick a state from the menu to drive the light to that state on demand. Great for picking colors.
@@ -90,7 +90,8 @@ Use `Resources/config.example.json` as a starting point.
 
 Once running, the menubar shows a colored circle reflecting the effective state. Click it for:
 
-- **Sessions** — list of active Claude Code sessions, their current per-session state, and the last event time.
+- **Current state** — the top row shows the effective state with a matching color dot (🔵 working · 🟣 idle/done · 🟠 waiting · 🔴 needs-auth/error · 🟡 compacting), so you can read the lamp without memorising your palette.
+- **Sessions** — list of active Claude Code sessions, each led by its state's color dot, with the last event time.
 - **Test render** — force the light to any of the 7 states.
 - **Pause** — pause for 15 min, 1 h, until tomorrow, or indefinitely.
 - **Settings** — open the settings window (NavigationSplitView sidebar):
