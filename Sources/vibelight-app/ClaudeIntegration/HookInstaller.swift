@@ -31,6 +31,33 @@ struct HookInstaller {
             ? .installed : .notInstalled
     }
 
+    /// The `vibelight-script-version` marker in the installed script, or nil if
+    /// the script isn't installed (or predates the marker entirely).
+    func installedScriptVersion() -> String? {
+        guard let contents = try? String(contentsOf: hookScriptPath, encoding: .utf8) else {
+            return nil
+        }
+        let marker = "vibelight-script-version:"
+        for line in contents.split(separator: "\n") {
+            if let range = line.range(of: marker) {
+                return line[range.upperBound...].trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return nil
+    }
+
+    /// Rewrite the installed script when it predates `HookScript.scriptVersion`.
+    /// Only touches an already-installed script — never installs fresh, so we
+    /// don't opt users in behind their back. `install()` is idempotent, so the
+    /// settings.json hook entries are left as-is. Returns true if it upgraded.
+    @discardableResult
+    func upgradeIfOutdated() -> Bool {
+        guard status() == .installed else { return false }
+        guard installedScriptVersion() != HookScript.scriptVersion else { return false }
+        try? install()
+        return true
+    }
+
     func install() throws {
         try FileManager.default.createDirectory(
             at: hookScriptPath.deletingLastPathComponent(),
