@@ -23,6 +23,10 @@ final class AppViewModel: ObservableObject {
     private var reachabilityTask: Task<Void, Never>?
 
     init() {
+        // Keep an already-installed hook script current across app updates
+        // (e.g. the exec/`|| true` fix bumped it to v2). No-op if hooks were
+        // never installed.
+        hookInstaller.upgradeIfOutdated()
         settings.onChange = { [weak self] in
             Task { @MainActor [weak self] in await self?.handleSettingsChange() }
         }
