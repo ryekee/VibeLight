@@ -1,5 +1,10 @@
 # VibeLight
 
+[![Release](https://img.shields.io/github/v/release/ryekee/VibeLight?sort=semver&display_name=tag&color=7C3AED)](https://github.com/ryekee/VibeLight/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ryekee/VibeLight/total?color=2563EB)](https://github.com/ryekee/VibeLight/releases)
+[![License: MIT](https://img.shields.io/github/license/ryekee/VibeLight?color=64748B)](LICENSE)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-111827?logo=apple&logoColor=white)](#prerequisites)
+
 > Project your AI agent's vibe onto a real lamp.
 
 VibeLight is a macOS menu-bar app that watches what Claude Code is doing in your terminal and drives a Home Assistant–controlled light in real time. Glance at the lamp, know whether the agent is thinking, waiting for you, or done — without alt-tabbing into the terminal.
